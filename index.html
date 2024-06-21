@@ -1,0 +1,229 @@
+<!doctype html>
+<!--=======================================================
+//
+//     FILE : index.html
+//
+//  PROJECT : Stepper Motor Tester
+//
+//   AUTHOR : Bill Daniels
+//            Copyright 2024, D+S Tech Labs, Inc.
+//            All Rights Reserved
+//
+//======================================================-->
+
+<html lang="en-us">
+
+  <!-- Head -->
+  <head>
+
+    <!-- These three meta tags MUST come first in the <head> tag. -->
+    <!-- All other <head> content must come AFTER these tags.     -->
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Stepper Motor Tester</title>
+
+    <link rel="stylesheet" href="dsStyles.css" />
+
+    <style>
+
+      body
+      {
+        margin     : 0;
+        padding    : 0;
+        min-height : 100vh;
+        text-align : center;
+      }
+
+      #positionField
+      {
+        display : inline-block;
+        margin  : 0;
+        padding : 0 0.5vw;
+        width   : 13vw;
+
+        color            : #008000;
+        background-color : #202020;
+        border           : 0.2vw inset #505050;
+
+        font-family : monospace, sans-serif;
+        font-size   : 2vw;
+
+        text-align : right;
+      }
+
+      #dataWindow
+      {
+        display    : inline-block;
+        padding    : 0.2vw;
+        width      : 100%;
+        height     : 75vh;
+        box-sizing : border-box;
+        overflow   : auto;
+
+        color            : #008000;
+        background-color : #202020;
+        border           : 0.2vw inset #505050;
+
+        font-family : monospace, sans-serif;
+        font-size   : 0.8vw;
+
+        text-align  : left;
+        white-space : pre;
+      }
+
+    </style>
+
+    <!-- jQuery and dsExtras -->
+    <script src="jquery-3.7.1.min.js"></script>
+    <script src="dsExtras.js"></script>
+
+  </head>
+
+
+  <!-- Body -->
+  <body class="themeDark">
+
+    <br>
+    <div class="dsTitle">───── Stepper Motor Tester ─────</div>
+    <br>
+    <br>
+
+    <!-- Intro -->
+    <div id="intro" style="font-size:1.5vw">
+      This app uses an MCU Dev board, such as Arduino NANO,<br>
+      running a stepper driver, such as
+      <a href="https://biqu.equipment/products/bigtreetech-tmc2209-stepper-motor-driver-for-3d-printer-board-vs-tmc2208?_pos=1&_sid=ba516a784&_ss=r" target="_blank">BTT TMC2209</a>.<br>
+      The MCU board should be running my
+      <a href="https://github.com/DSTechLabs/StepperMotorController" target="_blank">StepperMotorController</a> firmware.<br>
+      <br>
+
+      Connect a USB cable from this computer to your MCU Dev board.<br>
+      Then click the button below to select the serial port of the board.<br>
+      <br>
+
+      <button class="dsButton" style="padding:1vw; font-size:2vw" onclick="ChoosePort()"> Choose Serial Port </button><br>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls" style="display:none; font-size:1.2vw">
+
+      <!-- Left Side -->
+      <div class="dsBlock" style="width:55vw; font-size:inherit">
+
+        <div class="flexRow" style="width:100%; justify-content:space-between; align-items:baseline">
+          <div>
+            Enable : <input id="enableSwitch" type="checkbox" class="dsSwitch" style="font-size:inherit" checked="true" onchange="ToggleEnable()" />
+            <button class="dsButton" style="margin-left:1vw; font-size:1vw" onpointerdown="SetHome()"> Set Home </button>
+          </div>
+          <div>
+            Current Position : <div id="positionField">0</div>
+          </div>
+        </div>
+        <br>
+
+        <div class="flexRow" style="width:100%; justify-content:space-between">
+          <div style="width:42vw">
+            Speed (steps per second):
+            <input id="speedField" type="number" class="dsInput" style="width:5vw"  min="1" max="9999" step="1" value="1000" onchange="SetSpeedFromField()" onkeydown="CheckForEnter(event, SetSpeedFromField)" /><br>
+            <input id="speedSlider" type="range" class="dsInput" style="width:100%" min="1" max="9999" step="1" value="1000" oninput="SetSpeedFromSlider()" onchange="SetSpeedFromSlider()" /><br>
+            <div class="flexRow" style="width:100%; box-sizing:border-box; justify-content:space-between">
+              <span>1</span>
+              <span>9999</span>
+            </div>
+          </div>
+          <div>
+            Ramping Factor:<br>
+            <input id="rampSlider" type="range" class="dsInput" style="width:10vw" min="1" max="9" step="1" value="5" onchange="SetRamp()" /><br>
+            <div class="flexRow" style="width:100%; box-sizing:border-box; justify-content:space-between">
+              <span>1</span>
+              <span>9</span>
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+
+        <!-- Motion -->
+        <div class="flexRow" style="width:100%; justify-content:space-between">
+
+          <div style="width:42vw">
+
+            <!-- Go To Absolute Position -->
+            <div style="font-family:Georgia; font-size:1.5vw">Absolute Position:</div>
+            <hr>
+            <div class="flexRow" style="width:100%; box-sizing:border-box; font-size:1vw; justify-content:space-between; align-items:flex-end">
+              <div style="text-align:left">
+                Lower Limit:<br>
+                <input id="lowerLimitField" type="number" class="dsInput" style="width:6vw" min="-2000000000" max="0" step="1" value="-2000000000" onblur="SetLower()" onkeydown="CheckForEnter(event, SetLower)" /><br>
+                &nbsp;↓
+              </div>
+              <div style="text-align:center">
+                Home<br>
+                ↓
+              </div>
+              <div style="text-align:right">
+                Upper Limit:<br>
+                <input id="upperLimitField" type="number" class="dsInput" style="width:6vw" min="0" max="2000000000" step="1" value="2000000000" onblur="SetUpper()" onkeydown="CheckForEnter(event, SetUpper)" /><br>
+                ↓&nbsp;
+              </div>
+            </div>
+            <input id="positionSlider" type="range" class="dsInput" style="width:100%; font-size:2vw" title="Move the slider to rotate motor\nat the speed set above" min="-2000000000" max="2000000000" step="1" value="0" onchange="GoTo()" /><br>
+            <div class="flexRow" style="margin-top:-1vw; width:100%; box-sizing:border-box; justify-content:space-between; font-size:3vw">
+              <span style="cursor:pointer" title="Go to Lower Limit"   onpointerdown="GoLower()">⯅</span>
+              <span style="cursor:pointer" title="Go to Home Position" onpointerdown="GoHome()" >⯅</span>
+              <span style="cursor:pointer" title="Go to Upper Limit"   onpointerdown="GoUpper()">⯅</span>
+            </div>
+            <br>
+
+            <!-- Move Relative Steps -->
+            <div style="font-family:Georgia; font-size:1.5vw">Relative Motion:</div>
+            <hr>
+            <div class="flexRow" style="margin-top:-1vw; justify-content:center; align-items:center">
+              <div class="dsBlock" style="font-size:4vw; cursor:pointer" onpointerdown="GoRelativeBack()">🡄</div>
+              <div style="margin-top:2vw; text-align:center"><input id="relativeField" type="number" class="dsInput" style="width:10vw" min="1" max="2000000000" step="1" value="1000" /><br>steps</div>
+              <div class="dsBlock" style="font-size:4vw; cursor:pointer" onpointerdown="GoRelativeForward()">🡆</div>
+            </div>
+
+          </div>
+
+          <!-- E-Stop Button -->
+          <label class="eStop" style="font-size:2vw" onpointerdown="EStop()"></label>
+
+        </div>
+        <br>
+        <br>
+        <br>
+
+        <div style="font-family:Georgia, serif; font-size:1vw">
+          If you use this tool often, please
+          <a href="https://buymeacoffee.com/dstechlabs" target="_blank">Buy Me A Coffee ☕</a>
+        </div>
+
+      </div>
+
+      <!-- Right Side -->
+      <div class="dsBlock" style="margin-left:4vw; width:35vw; font-size:1.2vw; text-align:left">
+
+        Serial Monitor:<br>
+        <div id="dataWindow" class="dsScrollable"></div><br>
+
+        <div class="flexRow" style="justify-content:flex-start; font-size:inherit">
+          <span>Enter command :</span>
+          <input id="commandField" type="text" class="dsInput" style="margin-left:1vw; font-size:inherit" onkeydown="CheckForEnter(event, SendCommandField)" />
+          <button class="dsButton" style="margin-left:1vw; font-size:inherit" onpointerdown="SendCommandField()"> Send </button><br>
+        </div>
+
+      </div>
+      <br>
+
+    </div>
+
+
+    <!-- Load script -->
+    <script src="stepperTester.js"></script>
+
+  </body>
+
+</html>
